@@ -25,6 +25,19 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <strong>Current Participants:</strong>
+            <ul class="participants-list">
+              ${details.participants.length > 0 
+                ? details.participants.map(email => `
+                    <li>
+                      <span class="participant-email">${email}</span>
+                      <span class="delete-icon" data-activity="${name}" data-email="${email}">×</span>
+                    </li>
+                  `).join('')
+                : '<li>No participants yet</li>'}
+            </ul>
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -83,4 +96,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize app
   fetchActivities();
+
+  // Handle delete participant
+  document.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-icon")) {
+      const activity = event.target.dataset.activity;
+      const email = event.target.dataset.email;
+
+      if (confirm(`Remove ${email} from ${activity}?`)) {
+        try {
+          const response = await fetch(
+            `/activities/${encodeURIComponent(activity)}/participants/${encodeURIComponent(email)}`,
+            { method: "DELETE" }
+          );
+
+          if (response.ok) {
+            // Refresh activities to show updated list
+            fetchActivities();
+            showMessage(`Removed ${email} from ${activity}`, "success");
+          } else {
+            const result = await response.json();
+            showMessage(result.detail || "Failed to remove participant", "error");
+          }
+        } catch (error) {
+          showMessage("Failed to remove participant. Please try again.", "error");
+          console.error("Error removing participant:", error);
+        }
+      }
+    }
+  });
+
+  // Helper function to show messages
+  function showMessage(text, type) {
+    messageDiv.textContent = text;
+    messageDiv.className = type;
+    messageDiv.classList.remove("hidden");
+    setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+  }
 });
